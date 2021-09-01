@@ -1,4 +1,4 @@
-import { PaginationParams } from './types/PaginationParams.type'
+import { Params } from './types/Params.type'
 import { ETHSignTx, HDWallet } from '@shapeshiftoss/hdwallet-core'
 
 type Transaction = {
@@ -126,7 +126,7 @@ export interface ChainAdapter {
   /**
    * Get Transaction History for an address
    */
-  getTxHistory(address: string, paginationParams?: PaginationParams): Promise<TxHistoryResponse>
+  getTxHistory(address: string, params?: Params): Promise<TxHistoryResponse>
 
   buildSendTransaction(input: BuildSendTxInput): Promise<any>
 
