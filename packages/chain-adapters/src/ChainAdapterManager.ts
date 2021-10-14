@@ -4,38 +4,61 @@ import { EthereumChainAdapter } from './ethereum'
 import { BitcoinChainAdapter } from './bitcoin'
 import { BitcoinAPI, EthereumAPI } from '@shapeshiftoss/unchained-client'
 
-export type UnchainedUrls = Partial<Record<ChainTypes, string>>
+export type UnchainedUrls = Record<ChainTypes, string>
+
+export type UnchainedProviders = {
+  [ChainTypes.Bitcoin]: BitcoinAPI.V1Api
+  [ChainTypes.Ethereum]: EthereumAPI.V1Api
+}
+
+function constructUnchainedProvider(
+  type: ChainTypes,
+  baseURL: string
+): UnchainedProviders[ChainTypes] {
+  switch (type) {
+    case ChainTypes.Ethereum:
+      return new EthereumAPI.V1Api(new EthereumAPI.Configuration({ basePath: baseURL }))
+    case ChainTypes.Bitcoin:
+      return new BitcoinAPI.V1Api(new BitcoinAPI.Configuration({ basePath: baseURL }))
+    default:
+      throw new Error(`ChainAdapterManager: cannot instantiate unchained provider for ${type}`)
+  }
+}
 
 export class ChainAdapterManager {
   private supported: Map<ChainTypes, () => ChainAdapter<ChainTypes>> = new Map()
   private instances: Map<ChainTypes, ChainAdapter<ChainTypes>> = new Map()
 
-  constructor(unchainedUrls: UnchainedUrls) {
-    if (!unchainedUrls) {
+  constructor(unchainedUrlsOrProviders: Partial<UnchainedUrls | UnchainedProviders>) {
+    if (!unchainedUrlsOrProviders) {
       throw new Error('Blockchain urls required')
     }
-    ;(Object.entries(unchainedUrls) as Array<[keyof UnchainedUrls, string]>).forEach(
-      ([type, baseURL]) => {
-        switch (type) {
-          case ChainTypes.Ethereum: {
-            const provider = new EthereumAPI.V1Api(
-              new EthereumAPI.Configuration({ basePath: baseURL })
-            )
-            return this.addChain(type, () => new EthereumChainAdapter({ provider }))
-          }
-          case ChainTypes.Bitcoin: {
-            const provider = new BitcoinAPI.V1Api(
-              new BitcoinAPI.Configuration({ basePath: baseURL })
-            )
-            return this.addChain(
-              type,
-              () => new BitcoinChainAdapter({ provider, coinName: 'Bitcoin' })
-            )
-          }
-        }
-        throw new Error(`ChainAdapterManager: cannot instantiate ${type} chain adapter`)
+
+    const unchainedProviders = Object.fromEntries(
+      Object.entries(unchainedUrlsOrProviders).map(([type, urlOrProvider]) =>
+        typeof urlOrProvider === 'string'
+          ? constructUnchainedProvider(type as ChainTypes, urlOrProvider)
+          : urlOrProvider
+      )
+    ) as Partial<UnchainedProviders>
+
+    for (const [type, provider] of Object.entries(unchainedProviders)) {
+      switch (type) {
+        case ChainTypes.Ethereum:
+          const ethereumProvider = provider as UnchainedProviders[ChainTypes.Ethereum]
+          this.addChain(type, () => new EthereumChainAd5apter({ provider: ethereumProvider }))
+          break
+        case ChainTypes.Bitcoin:
+          const bitcoinProvider = provider as UnchainedProviders[ChainTypes.Bitcoin]
+          this.addChain(
+            type,
+            () => new BitcoinChainAdapter({ provider: bitcoinProvider, coinName: 'Bitcoin' })
+          )
+          break
+        default:
+          throw new Error(`ChainAdapterManager: cannot instantiate ${type} chain adapter`)
       }
-    )
+    }
   }
 
   /**
