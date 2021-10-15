@@ -46,7 +46,7 @@ export class ChainAdapterManager {
       switch (type) {
         case ChainTypes.Ethereum:
           const ethereumProvider = provider as UnchainedProviders[ChainTypes.Ethereum]
-          this.addChain(type, () => new EthereumChainAd5apter({ provider: ethereumProvider }))
+          this.addChain(type, () => new EthereumChainAdapter({ provider: ethereumProvider }))
           break
         case ChainTypes.Bitcoin:
           const bitcoinProvider = provider as UnchainedProviders[ChainTypes.Bitcoin]
