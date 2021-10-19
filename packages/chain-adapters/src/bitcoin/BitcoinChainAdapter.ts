@@ -9,7 +9,7 @@ import {
   Params,
   SignBitcoinTxInput,
   Recipient,
-  BTCFeeDataKey
+  BTCFeeData
 } from '../api'
 import { ErrorHandler } from '../error/ErrorHandler'
 import { bip32ToAddressNList, BTCInputScriptType, BTCSignTx } from '@shapeshiftoss/hdwallet-core'
@@ -21,6 +21,9 @@ const coinSelect = require('coinselect')
 
 const MIN_RELAY_FEE = 3000 // sats/kbyte
 const DEFAULT_FEE = undefined
+
+const UNCHAINED_API_BASE_URL = process.env.UNCHAINED_API_BASE_URL
+if (!UNCHAINED_API_BASE_URL) throw new Error('UNCHAINED_API_BASE_URL env var not set')
 
 export type BitcoinChainAdapterDependencies = {
   provider: Bitcoin.V1Api
@@ -180,56 +183,7 @@ export class BitcoinChainAdapter implements ChainAdapter {
   }
 
   getFeeData = async (): Promise<FeeData> => {
-    const responseData = (await axios.get('https://bitcoinfees.earn.com/api/v1/fees/list'))['data']
-    const confTimes: FeeData = {
-      [BTCFeeDataKey.Fastest]: {
-        minMinutes: 0,
-        maxMinutes: 36,
-        effort: 5,
-        fee: DEFAULT_FEE
-      },
-      [BTCFeeDataKey.HalfHour]: {
-        minMinutes: 0,
-        maxMinutes: 36,
-        effort: 4,
-        fee: DEFAULT_FEE
-      },
-      [BTCFeeDataKey.OneHour]: {
-        minMinutes: 0,
-        maxMinutes: 60,
-        effort: 3,
-        fee: DEFAULT_FEE
-      },
-      [BTCFeeDataKey.SixHour]: {
-        minMinutes: 36,
-        maxMinutes: 360,
-        effort: 2,
-        fee: DEFAULT_FEE
-      },
-      [BTCFeeDataKey.TwentyFourHour]: {
-        minMinutes: 36,
-        maxMinutes: 1440,
-        effort: 1,
-        fee: DEFAULT_FEE
-      }
-    }
-
-    for (const time of Object.keys(confTimes)) {
-      const confTime = confTimes[time as BTCFeeDataKey]
-      for (const fee of responseData['fees']) {
-        if (fee['maxMinutes'] < confTime['maxMinutes']) {
-          confTime['fee'] = Math.max(fee['minFee'] * 1024, MIN_RELAY_FEE)
-          confTime['minMinutes'] = fee['minMinutes']
-          confTime['maxMinutes'] = fee['maxMinutes']
-          break
-        }
-      }
-      if (confTime['fee'] === undefined) {
-        confTime['fee'] = Math.max(responseData.length[-1]['minFee'] * 1024, MIN_RELAY_FEE)
-      }
-    }
-
-    return confTimes
+    return (await axios.get<BTCFeeData>(UNCHAINED_API_BASE_URL + '/fees')).data
   }
 
   getAddress = async ({
@@ -254,8 +208,8 @@ export class BitcoinChainAdapter implements ChainAdapter {
       ])
       if (publicKeys) {
         const pubkey = publicKeys[0].xpub
-        const accountData = await this.getAccount(pubkey)
-        index = isChange ? accountData.nextChangeAddressIndex : accountData.nextReceiveAddressIndex
+        const accountData:Bitcoin.BitcoinAccount = await this.getAccount(pubkey)
+        index = (isChange ? accountData.changeIndex : accountData.receiveIndex) || undefined
       } else {
         return ErrorHandler(new Error("Unable to get wallet's pubkeys"))
       }

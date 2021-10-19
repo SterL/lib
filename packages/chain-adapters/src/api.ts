@@ -138,7 +138,7 @@ export type GetFeeDataInput = {
   value: string
 }
 
-export enum ETHFeeDataKey {
+export enum FeeDataKey {
   Slow = 'slow',
   Average = 'average',
   Fast = 'fast'
@@ -151,32 +151,20 @@ export type ETHFeeDataType = {
 }
 
 export type ETHFeeData = {
-  [ETHFeeDataKey.Slow]: ETHFeeDataType
-  [ETHFeeDataKey.Average]: ETHFeeDataType
-  [ETHFeeDataKey.Fast]: ETHFeeDataType
-}
-
-export enum BTCFeeDataKey {
-  Fastest = 'fastest',
-  HalfHour = 'halfHour',
-  OneHour = '1hour',
-  SixHour = '6hour',
-  TwentyFourHour = '24hour'
+  [FeeDataKey.Slow]: ETHFeeDataType
+  [FeeDataKey.Average]: ETHFeeDataType
+  [FeeDataKey.Fast]: ETHFeeDataType
 }
 
 export type BTCFeeDataType = {
-  minMinutes: number
-  maxMinutes: number
-  effort: number
-  fee?: number
+  blocksUntilConfirmation: number
+  satsPerByte: number
 }
 
 export type BTCFeeData = {
-  [BTCFeeDataKey.Fastest]: BTCFeeDataType
-  [BTCFeeDataKey.HalfHour]: BTCFeeDataType
-  [BTCFeeDataKey.OneHour]: BTCFeeDataType
-  [BTCFeeDataKey.SixHour]: BTCFeeDataType
-  [BTCFeeDataKey.TwentyFourHour]: BTCFeeDataType
+  [FeeDataKey.Slow]: BTCFeeDataType
+  [FeeDataKey.Average]: BTCFeeDataType
+  [FeeDataKey.Fast]: BTCFeeDataType
 }
 
 export type FeeData = ETHFeeData | BTCFeeData
@@ -249,7 +237,7 @@ export interface ChainAdapter {
 
   signTransaction(signTxInput: SignBitcoinTxInput | SignEthTxInput): Promise<string>
 
-  getFeeData(input: Partial<GetFeeDataInput>): Promise<FeeData>
+  getFeeData(input?: Partial<GetFeeDataInput>): Promise<FeeData>
 
   broadcastTransaction(hex: string): Promise<string>
 
