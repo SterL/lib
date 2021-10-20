@@ -3,9 +3,9 @@ import WAValidator from 'multicoin-address-validator'
 import {
   BTCInputScriptType,
   BTCOutputAddressType,
-  BTCOutputScriptType,
   BTCSignTx,
   BTCSignTxInput,
+  BTCSignTxInputUnguarded,
   BTCSignTxOutput,
   HDWallet,
   PublicKey,
@@ -33,6 +33,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
     coinType: 0,
     accountNumber: 0
   }
+  private readonly defaultBTCScriptType: BTCInputScriptType = BTCInputScriptType.SpendWitness
 
   // TODO(0xdef1cafe): constraint this to utxo coins and refactor this to be a UTXOChainAdapter
   coinName: string
@@ -46,14 +47,18 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
     return ChainTypes.Bitcoin
   }
 
-  async getPubKey(wallet: HDWallet, bip32Params: BIP32Params): Promise<PublicKey> {
+  async getPubKey(
+    wallet: HDWallet,
+    bip32Params: BIP32Params,
+    scriptType: BTCInputScriptType
+  ): Promise<PublicKey> {
     const path = toRootDerivationPath(bip32Params)
     const publicKeys = await wallet.getPublicKeys([
       {
         coin: this.coinName,
         addressNList: bip32ToAddressNList(path),
         curve: 'secp256k1', // TODO(0xdef1cafe): from constant?
-        scriptType: BTCInputScriptType.SpendWitness
+        scriptType
       }
     ])
     if (!publicKeys?.[0]) throw new Error("couldn't get public key")
@@ -120,7 +125,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
       const {
         recipients,
         wallet,
-        scriptType = BTCInputScriptType.SpendWitness,
+        scriptType = this.defaultBTCScriptType,
         bip32Params = this.defaultBIP32Params,
         feeSpeed
       } = tx
@@ -130,7 +135,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
       }
 
       const path = toRootDerivationPath(bip32Params)
-      const pubkey = await this.getPubKey(wallet, bip32Params)
+      const pubkey = await this.getPubKey(wallet, bip32Params, scriptType)
       if (!pubkey) throw new Error('BitcoinChainAdapter: no pubkey available from wallet')
       const { data: utxos } = await this.provider.getUtxos({
         pubkey: pubkey.xpub
@@ -164,7 +169,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
 
         signTxInputs.push({
           addressNList: bip32ToAddressNList(input.path),
-          scriptType: BTCInputScriptType.SpendWitness,
+          scriptType: scriptType,
           amount: String(input.value),
           vout: input.vout,
           txid: input.txid,
@@ -181,7 +186,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
             addressNList: bip32ToAddressNList(
               `${path}/1/${String(account.chainSpecific.nextChangeAddressIndex)}`
             ),
-            scriptType: BTCOutputScriptType.PayToWitness,
+            scriptType,
             isChange: true
           }
         }
@@ -189,7 +194,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
           addressType: BTCOutputAddressType.Spend,
           amount,
           address: out.address,
-          scriptType: BTCOutputScriptType.PayToWitness
+          scriptType
         }
       })
 
@@ -258,7 +263,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
 
     // If an index is not passed in, we want to use the newest unused change/receive indices
     if (index === undefined) {
-      const { xpub } = await this.getPubKey(wallet, bip32Params)
+      const { xpub } = await this.getPubKey(wallet, bip32Params, BTCInputScriptType.SpendWitness)
       const account = await this.getAccount(xpub)
       index = isChange
         ? account.chainSpecific.nextChangeAddressIndex

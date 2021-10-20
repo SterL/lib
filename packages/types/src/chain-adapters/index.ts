@@ -89,6 +89,33 @@ type ChainTxTypeInner = {
 
 export type ChainTxType<T> = T extends keyof ChainTxTypeInner ? ChainTxTypeInner[T] : never
 
+/*export type BuildSendTxInput = {
+  wallet: HDWallet
+  to: string
+  value: string
+  bip32Params?: BIP32Params
+  /** Optional params for btc txs ** /
+  scriptType?: BTCInputScriptType
+  opReturnData?: string
+  /** Optional param for eth txs ** /
+  erc20ContractAddress?: string // Indicates which ERC20 is being sent
+  gasLimit?: string
+} & (
+  | {
+      /** In base units ** /
+      fee: string
+      feeSpeed?: never
+    }
+  | {
+      fee?: never
+      feeSpeed: FeeDataKey
+    }
+  | {
+      fee?: never
+      feeSpeed?: never
+    }
+)*/
+
 export type BuildSendTxInput = {
   to?: string
   value?: string
@@ -99,7 +126,10 @@ export type BuildSendTxInput = {
   erc20ContractAddress?: string
   recipients?: Array<Bitcoin.Recipient>
   opReturnData?: string
-  scriptType?: BTCInputScriptType
+  scriptType?:
+    | BTCInputScriptType.SpendWitness
+    | BTCInputScriptType.SpendP2SHWitness
+    | BTCInputScriptType.SpendAddress
   gasLimit?: string
   bip32Params?: BIP32Params
   feeSpeed?: FeeDataKey

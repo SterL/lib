@@ -35,7 +35,7 @@ const main = async () => {
       coinType: 0,
       accountNumber: 0,
       isChange: false,
-      index: 10
+      index: 11
     }
 
     const btcAddress = await btcChainAdapter.getAddress({
@@ -51,6 +51,7 @@ const main = async () => {
       wallet,
       opReturnData: 'sup fool',
       bip32Params: btcBip32Params,
+      // scriptType: ,
       feeSpeed: ChainAdapters.FeeDataKey.Slow
     }
 
