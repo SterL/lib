@@ -122,13 +122,7 @@ export class BitcoinChainAdapter implements ChainAdapter<ChainTypes.Bitcoin> {
     estimatedFees: ChainAdapters.FeeDataEstimate<ChainTypes.Bitcoin>
   }> {
     try {
-      const {
-        recipients,
-        wallet,
-        scriptType = this.defaultBTCScriptType,
-        bip32Params = this.defaultBIP32Params,
-        feeSpeed
-      } = tx
+      const { recipients, wallet, bip32Params = this.defaultBIP32Params, feeSpeed } = tx
 
       if (!recipients || !recipients.length) {
         throw new Error('BitcoinChainAdapter: recipients is required')
